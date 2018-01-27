@@ -20,6 +20,9 @@ def shuffle_string(s):
 # YOU WILL START YOUR IMPLEMENTATION FROM HERE DOWN ###
 
 
+completment_dict = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A'}
+
+
 def get_complement(nucleotide):
     """ Returns the complementary nucleotide
 
@@ -30,8 +33,7 @@ def get_complement(nucleotide):
     >>> get_complement('C')
     'G'
     """
-    # TODO: implement this
-    pass
+    return completment_dict[nucleotide.upper()]
 
 
 def get_reverse_complement(dna):
@@ -45,8 +47,17 @@ def get_reverse_complement(dna):
     >>> get_reverse_complement("CCGCGTTCA")
     'TGAACGCGG'
     """
-    # TODO: implement this
-    pass
+    reverse_complement = ''
+    for nucleotide in dna:
+        # Add each complement to the string
+        reverse_complement += get_complement(nucleotide)
+
+    # Reverse and return the string
+    return reverse_complement[::-1]
+
+
+start_codon = codons[3][0]
+stop_codon = codons[10]
 
 
 def rest_of_ORF(dna):
@@ -62,8 +73,17 @@ def rest_of_ORF(dna):
     >>> rest_of_ORF("ATGAGATAGG")
     'ATGAGA'
     """
-    # TODO: implement this
-    pass
+    i = 0
+    ORF = ''
+    while i < len(dna):
+        old_i = i
+        i += 3
+        temp = dna[old_i:i:1]
+        if temp == stop_codon[0] or temp == stop_codon[1] or temp == stop_codon[2]:
+            return ORF
+        else:
+            ORF += temp
+    return ORF
 
 
 def find_all_ORFs_oneframe(dna):
@@ -79,8 +99,19 @@ def find_all_ORFs_oneframe(dna):
     >>> find_all_ORFs_oneframe("ATGCATGAATGTAGATAGATGTGCCC")
     ['ATGCATGAATGTAGA', 'ATGTGCCC']
     """
-    # TODO: implement this
-    pass
+    ORF_list = []
+    base_frame = dna
+    base_frame_num = dna.find(start_codon)
+    while 1:
+        full_frame = rest_of_ORF(base_frame[base_frame_num:])
+        ORF_list.append(full_frame)
+        next_ATG_loc = base_frame[len(full_frame):].find(start_codon)
+        if (next_ATG_loc % 3) != 0:
+            break
+        else:
+            base_frame = base_frame[len(full_frame)+3:]
+
+    return ORF_list
 
 
 def find_all_ORFs(dna):
