@@ -47,12 +47,12 @@ def get_reverse_complement(dna):
     >>> get_reverse_complement("CCGCGTTCA")
     'TGAACGCGG'
     """
+    # Create a empty string to hold the reverse complement
     reverse_complement = ''
-    for nucleotide in dna:
-        # Add each complement to the string
-        reverse_complement += get_complement(nucleotide)
 
-    # Reverse and return the string
+    # Add the nucleotide complements to the reverse complement string
+    for nucleotide in dna:
+        reverse_complement += get_complement(nucleotide)
     return reverse_complement[::-1]
 
 
@@ -75,10 +75,21 @@ def rest_of_ORF(dna):
     """
     i = 0
     ORF = ''
+
+    # As long as the current position of the curser is not beyond the dna length,
+    # read three as a group until hit a stop codon
     while i < len(dna):
+        # Save the current i as the index to start recording 3 necleuctides
         old_i = i
+
+        # Add 3 to i to get the end index
         i += 3
+
+        # Store the 3 necleuctides as one in a temporary variable
         temp = dna[old_i:i:1]
+
+        # check if the codon is a stop codon, return the ORF as is; otherwise
+        # keep adding codons to the ORF
         if temp == stop_codon[0] or temp == stop_codon[1] or temp == stop_codon[2]:
             return ORF
         else:
@@ -100,16 +111,44 @@ def find_all_ORFs_oneframe(dna):
     ['ATGCATGAATGTAGA', 'ATGTGCCC']
     """
     ORF_list = []
+
+    # base_frame is the base from which to look for a starting codon
     base_frame = dna
-    base_frame_num = dna.find(start_codon)
+
+    # base_frame_num is the starting index for a start codon
+    base_frame_num = base_frame.find(start_codon)
+
+    # Making sure that the frames stay in sync by making sure the ATG location
+    # can be divided by three
+    while base_frame_num % 3 != 0:
+        base_frame = base_frame[3:]
+        base_frame_num = base_frame.find(start_codon)
+
+    # Keep looking for an ORF until when there's no more to read or when it
+    # would be a frame out of the original sync
     while 1:
+        # base_frame_num would be negative when there is no starting codon to
+        # be found, in this case, the loop should break and allow the function
+        # to return the ORF collected up to this point
+        if base_frame_num < 0:
+            break
+
+        # Get one full frame from rest_of_ORF() and append it to the ORF_list
         full_frame = rest_of_ORF(base_frame[base_frame_num:])
         ORF_list.append(full_frame)
+
+        # Look for the next ATG index from a base_frame with the previously
+        # found full_frame removed from the start
         next_ATG_loc = base_frame[len(full_frame):].find(start_codon)
+
+        # if the index of the next ATG is not divisible by 3 (meaning that
+        # the new start codon isn't in sync with the previuos one), then
+        # break from the looking for another ORF
         if (next_ATG_loc % 3) != 0:
             break
         else:
-            base_frame = base_frame[len(full_frame)+3:]
+            base_frame = base_frame[len(full_frame) + 3:]
+            base_frame_num = next_ATG_loc - 3
 
     return ORF_list
 
@@ -127,8 +166,19 @@ def find_all_ORFs(dna):
     >>> find_all_ORFs("ATGCATGAATGTAG")
     ['ATGCATGAATGTAG', 'ATGAATGTAG', 'ATG']
     """
-    # TODO: implement this
-    pass
+    all_ORF = []
+
+    # Loop through the possibilities of a starting codon being on the multiples
+    # of 0, 1, 2 index
+    for i in range(3):
+        temp_all_frame = find_all_ORFs_oneframe(dna[i:])
+
+        # In case that there are more than just one frame in one find_all,
+        # append individual ones to the list with the for loop
+        for y in range(len(temp_all_frame)):
+            all_ORF.append(temp_all_frame[y])
+
+    return all_ORF
 
 
 def find_all_ORFs_both_strands(dna):
@@ -191,6 +241,7 @@ def gene_finder(dna):
     """
     # TODO: implement this
     pass
+
 
 if __name__ == "__main__":
     import doctest
