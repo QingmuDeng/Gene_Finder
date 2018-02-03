@@ -9,6 +9,8 @@ YOUR HEADER COMMENT HERE
 import random
 from amino_acids import aa, codons, aa_table   # you may find these useful
 from load import load_seq
+import multiprocessing as mp
+
 
 
 def shuffle_string(s):
@@ -79,13 +81,12 @@ def rest_of_ORF(dna):
     # As long as the current position of the curser is not beyond the dna length,
     # read three as a group until hit a stop codon
     while i < len(dna):
+        #print(dna)
         # Save the current i as the index to start recording 3 necleuctides
         old_i = i
-
         # Add 3 to i to get the end index
         i += 3
-
-        # Store the 3 necleuctides as one in a temporary variable
+        # store the 3 necleuctides as one in a temporary variable
         temp = dna[old_i:i:1]
 
         # check if the codon is a stop codon, return the ORF as is; otherwise
@@ -111,44 +112,20 @@ def find_all_ORFs_oneframe(dna):
     ['ATGCATGAATGTAGA', 'ATGTGCCC']
     """
     ORF_list = []
-
-    # base_frame is the base from which to look for a starting codon
+    #base_num = dna.find('ATG')
     base_frame = dna
-
-    # base_frame_num is the starting index for a start codon
-    base_frame_num = base_frame.find(start_codon)
-
-    # Making sure that the frames stay in sync by making sure the ATG location
-    # can be divided by three
-    while base_frame_num % 3 != 0:
-        base_frame = base_frame[3:]
-        base_frame_num = base_frame.find(start_codon)
-
-    # Keep looking for an ORF until when there's no more to read or when it
-    # would be a frame out of the original sync
     while 1:
-        # base_frame_num would be negative when there is no starting codon to
-        # be found, in this case, the loop should break and allow the function
-        # to return the ORF collected up to this point
-        if base_frame_num < 0:
-            break
-
-        # Get one full frame from rest_of_ORF() and append it to the ORF_list
-        full_frame = rest_of_ORF(base_frame[base_frame_num:])
-        ORF_list.append(full_frame)
-
-        # Look for the next ATG index from a base_frame with the previously
-        # found full_frame removed from the start
-        next_ATG_loc = base_frame[len(full_frame):].find(start_codon)
-
-        # if the index of the next ATG is not divisible by 3 (meaning that
-        # the new start codon isn't in sync with the previuos one), then
-        # break from the looking for another ORF
-        if (next_ATG_loc % 3) != 0:
-            break
+        base_num = base_frame.find('ATG')
+        if base_num < 0:
+            return ORF_list
+        elif base_num % 3 != 0:
+            base_frame = base_frame[3:]
         else:
-            base_frame = base_frame[len(full_frame) + 3:]
-            base_frame_num = next_ATG_loc - 3
+            #base_num
+            base_frame = base_frame[base_num:]
+            one_frame = rest_of_ORF(base_frame)
+            base_frame = base_frame[len(one_frame)+3:]
+            ORF_list.append(one_frame)
 
     return ORF_list
 
@@ -167,18 +144,18 @@ def find_all_ORFs(dna):
     ['ATGCATGAATGTAG', 'ATGAATGTAG', 'ATG']
     """
     all_ORF = []
-
     # Loop through the possibilities of a starting codon being on the multiples
     # of 0, 1, 2 index
     for i in range(3):
+#         print(dna[i:])
         temp_all_frame = find_all_ORFs_oneframe(dna[i:])
-
         # In case that there are more than just one frame in one find_all,
         # append individual ones to the list with the for loop
-        for y in range(len(temp_all_frame)):
-            all_ORF.append(temp_all_frame[y])
+        if temp_all_frame != None:
+            all_ORF += [y for y in temp_all_frame]
 
     return all_ORF
+
 
 
 def find_all_ORFs_both_strands(dna):
@@ -190,8 +167,13 @@ def find_all_ORFs_both_strands(dna):
     >>> find_all_ORFs_both_strands("ATGCGAATGTAGCATCAAA")
     ['ATGCGAATG', 'ATGCTACATTCGCAT']
     """
-    # TODO: implement this
-    pass
+    dna_complement = get_reverse_complement(dna)
+    original_ORF = find_all_ORFs(dna)
+    complement_ORF = find_all_ORFs(dna_complement)
+    ORF_both = [i for i in original_ORF]
+    ORF_both += [i for i in complement_ORF]
+
+    return ORF_both
 
 
 def longest_ORF(dna):
@@ -200,8 +182,17 @@ def longest_ORF(dna):
     >>> longest_ORF("ATGCGAATGTAGCATCAAA")
     'ATGCTACATTCGCAT'
     """
-    # TODO: implement this
-    pass
+    ORF_both = find_all_ORFs_both_strands(dna)
+    longest_length = 0
+    longest_length_index = None
+    for i in range(len(ORF_both)):
+        if len(ORF_both[i]) > longest_length:
+            longest_length_index = i
+            longest_length = len(ORF_both[i])
+    if longest_length_index == None:
+        return '0'
+    else:
+        return ORF_both[longest_length_index]
 
 
 def longest_ORF_noncoding(dna, num_trials):
@@ -211,8 +202,42 @@ def longest_ORF_noncoding(dna, num_trials):
         dna: a DNA sequence
         num_trials: the number of random shuffles
         returns: the maximum length longest ORF """
-    # TODO: implement this
-    pass
+
+    random.seed()
+
+    # Define an output queue
+    output = mp.Queue()
+
+    def rand_dna(dna, output):
+        """ Generates a random string of numbers, lower- and uppercase chars. """
+        length = len(dna)
+        rand_str = ''.join(random.sample(dna, length))
+        rand_str = longest_ORF(rand_str)
+        output.put(rand_str)
+
+    times_to_run = 1
+    if num_trials > 100:
+        times_to_run = num_trials / 100
+        num_trials = 100
+
+    results = []
+
+    for i in range(int(times_to_run)):
+        # Setup a list of processes that we want to run
+        shuffle_process = [mp.Process(target=rand_dna, args=(dna, output)) for num in range(num_trials)]
+
+        # Run processes
+        for p in shuffle_process:
+            p.start()
+
+        # Exit the completed processes
+        for p in shuffle_process:
+            p.join()
+
+        # Get process results from the output queue
+        results.append(max([output.get() for p in shuffle_process]))
+
+    return len(max(results))
 
 
 def coding_strand_to_AA(dna):
@@ -229,8 +254,15 @@ def coding_strand_to_AA(dna):
         >>> coding_strand_to_AA("ATGCCCGCTTT")
         'MPA'
     """
-    # TODO: implement this
-    pass
+    AA = ''
+    i = 0
+    while i < len(dna):
+        old_i = i
+        i += 3
+        if i > len(dna):
+            break
+        AA += aa_table[dna[old_i:i:1]]
+    return AA
 
 
 def gene_finder(dna):
@@ -239,9 +271,21 @@ def gene_finder(dna):
         dna: a DNA sequence
         returns: a list of all amino acid sequences coded by the sequence dna.
     """
-    # TODO: implement this
-    pass
+    AA_sequence = []
+    threshold = longest_ORF_noncoding(dna, 1500)
+    print(threshold)
+    both_ORF = find_all_ORFs_both_strands(dna)
+    for i in range(len(both_ORF)):
+        if threshold < len(both_ORF[i]):
+            AA_sequence.append(coding_strand_to_AA(both_ORF[i]))
+    print(AA_sequence)
+    return AA_sequence
 
+# def main():
+    # print("Hello Gene Finder")
+from load import load_seq
+dna = load_seq("./data/X73525.fa")
+gene_finder(dna)
 
 if __name__ == "__main__":
     import doctest
