@@ -48,6 +48,8 @@ def get_reverse_complement(dna):
     'AAAGCGGGCAT'
     >>> get_reverse_complement("CCGCGTTCA")
     'TGAACGCGG'
+    >>> get_reverse_complement('TGAATGTAG')
+    'CTACATTCA'
     """
     # Create a empty string to hold the reverse complement
     reverse_complement = ''
@@ -74,6 +76,8 @@ def rest_of_ORF(dna):
     'ATG'
     >>> rest_of_ORF("ATGAGATAGG")
     'ATGAGA'
+    >>> rest_of_ORF('ATGATAGATTAGGTGCCC')
+    'ATGATAGAT'
     """
     i = 0
     ORF = ''
@@ -110,6 +114,8 @@ def find_all_ORFs_oneframe(dna):
         returns: a list of non-nested ORFs
     >>> find_all_ORFs_oneframe("ATGCATGAATGTAGATAGATGTGCCC")
     ['ATGCATGAATGTAGA', 'ATGTGCCC']
+    >>> find_all_ORFs_oneframe('GCATGAATGTAG')
+    ['ATG']
     """
     ORF_list = []
     #base_num = dna.find('ATG')
@@ -142,6 +148,8 @@ def find_all_ORFs(dna):
 
     >>> find_all_ORFs("ATGCATGAATGTAG")
     ['ATGCATGAATGTAG', 'ATGAATGTAG', 'ATG']
+    >>> find_all_ORFs("GCATGAATGTAG")
+    ['ATG', 'ATGAATGTAG']
     """
     all_ORF = []
     # Loop through the possibilities of a starting codon being on the multiples
@@ -166,6 +174,8 @@ def find_all_ORFs_both_strands(dna):
         returns: a list of non-nested ORFs
     >>> find_all_ORFs_both_strands("ATGCGAATGTAGCATCAAA")
     ['ATGCGAATG', 'ATGCTACATTCGCAT']
+    >>> find_all_ORFs_both_strands("ATGCATGAATGTAG")
+    ['ATGCATGAATGTAG', 'ATGAATGTAG', 'ATG', 'ATGCAT']
     """
     dna_complement = get_reverse_complement(dna)
     original_ORF = find_all_ORFs(dna)
@@ -181,6 +191,8 @@ def longest_ORF(dna):
         as a string
     >>> longest_ORF("ATGCGAATGTAGCATCAAA")
     'ATGCTACATTCGCAT'
+    >>> longest_ORF("ATGCATGAATGGCATGAATGTAG")
+    'ATGCATGAATGGCATGAATGTAG'
     """
     ORF_both = find_all_ORFs_both_strands(dna)
     longest_length = 0
@@ -253,6 +265,8 @@ def coding_strand_to_AA(dna):
         'MR'
         >>> coding_strand_to_AA("ATGCCCGCTTT")
         'MPA'
+        >>> coding_strand_to_AA("ATGCATGAATGGCATGAATGTAG")
+        'MHEWHEC'
     """
     AA = ''
     i = 0
