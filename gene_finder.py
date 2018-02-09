@@ -247,9 +247,9 @@ def longest_ORF_noncoding(dna, num_trials):
             p.join()
 
         # Get process results from the output queue
-        results.append(max([output.get() for p in shuffle_process]))
+        results.append(max([output.get() for p in shuffle_process], key = len))
 
-    return len(max(results))
+    return len(max(results, key = len))
 
 
 def coding_strand_to_AA(dna):
